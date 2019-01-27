@@ -1,19 +1,10 @@
 import datetime
 import re
-from multiprocessing.pool import Pool
 
 import geocoder
 from daftlistings import Daft, RentType
 
 date = str(datetime.datetime.today().strftime('%Y-%m-%d'))
-
-
-def write_to_file(data, file_name_raw):
-    filename = str(date) + str(file_name_raw) + '.csv'
-    with open(filename.replace("/", ""), 'w', encoding='utf-8') as file:
-        for row in data:
-            file.write(str(row) + "\n")
-        file.close()
 
 
 def get_daft_listings(property_type, offset):
@@ -25,13 +16,32 @@ def get_daft_listings(property_type, offset):
     return daft.search()
 
 
+def write_to_file(places, prices, locations, file_name_raw):
+    filename = str(date) + str(file_name_raw) + '.csv'
+    count = 0
+
+    with open(filename.replace("/", ""), 'a', encoding='utf-8') as file:
+        while count < len(places):
+            file.write(places[count] + "," + prices[count] + "," + locations[count] + "," + filename.replace("/","") + "\n")
+            count+=1
+    file.close()
+
+
+def get_geo_data(data):
+    g = geocoder.bing(data, key="")
+    return str(g._list[0].eastnorth).replace("[", "").replace("]", "")
+
+
 def get_property_information(property_type):
     pages = True
     print("<--------------->")
     print(property_type)
     print("<--------------->")
-    csvData = []
+    place_names = []
+    prices = []
+    locations = []
     offset = 0
+    current_properties_in_catagory = 0
 
     while pages:
         listings = get_daft_listings(property_type, offset)
@@ -45,25 +55,26 @@ def get_property_information(property_type):
             if "week" in priceRaw.lower():
                 price = str((int(price)) * 4)
 
-            location = str(listing.formalised_address.replace(",", ""))
+            current_property_location = str(listing.formalised_address.replace(",", ""))
 
-            try:
-                g = geocoder.arcgis(location)
-                lat = str(g.geojson['features'][0]['geometry']['coordinates'][0])
-                long = str(g.geojson['features'][0]['geometry']['coordinates'][1])
-                line = location + " ," + lat + "," + long + "," + price + "," + str(property_type) + str(date)
-                print(line)
-                csvData.append(line)
-            except:
-                csvData.append(location + " ," + price + "," + (str(property_type) + " ERROR") + str(date))
+            if current_property_location not in place_names and (len(current_property_location) > 10):
+                place_names.append(current_property_location)
+                prices.append(price)
+
+                locations.append(get_geo_data(current_property_location))
+
+                current_properties_in_catagory += 1
+                print(current_properties_in_catagory)
+
         offset += 10
+        if current_properties_in_catagory >= 50:
+            pages = False
+    write_to_file(place_names, prices, locations,str(property_type))
 
 
 def main():
-    pool = Pool(processes=8)
-    pool.map(get_property_information, RentType)
-    pool.close()
-    pool.join()
+    for property in RentType:
+        get_property_information(property)
 
 
 if __name__ == '__main__':
