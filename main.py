@@ -1,5 +1,6 @@
 import datetime
 import re
+from multiprocessing.pool import Pool
 
 import geocoder
 from daftlistings import Daft, RentType
@@ -48,18 +49,24 @@ def get_property_information(property_type):
 
             try:
                 g = geocoder.arcgis(location)
-                print(location + " ," + str(g.geojson['features'][0]['geometry']['coordinates'][0]) + "," + str(
-                    g.geojson['features'][0]['geometry']['coordinates'][1]) + "," + price + "," + str(date))
-
-                csvData.append(
-                    location + " ," + str(g.geojson['features'][0]['geometry']['coordinates'][0]) + "," + str(
-                        g.geojson['features'][0]['geometry']['coordinates'][1]) + "," + price + "," + str(date))
+                lat = str(g.geojson['features'][0]['geometry']['coordinates'][0])
+                long = str(g.geojson['features'][0]['geometry']['coordinates'][1])
+                line = location + " ," + lat + "," + long + "," + price + "," + str(property_type) + str(date)
+                print(line)
+                csvData.append(line)
             except:
-                csvData.append(location + " ," + price + "," + str(date))
-                print("ERROR")
-
+                csvData.append(location + " ," + price + "," + (str(property_type) + " ERROR") + str(date))
         offset += 10
 
 
-for type in RentType:
-    get_property_information(type)
+def main():
+    pool = Pool(processes=8)
+    pool.map(get_property_information, RentType)
+    pool.close()
+    pool.join()
+
+
+if __name__ == '__main__':
+    print("START : " + str(datetime.datetime.now()))
+    main()
+    print("END : " + str(datetime.datetime.now()))
