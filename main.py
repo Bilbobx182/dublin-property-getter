@@ -63,9 +63,25 @@ def remove_duplicate_properties(contents):
     return [i for n, i in enumerate(contents) if i not in contents[n + 1:]]
 
 
+def validate_listings(listings, property_information):
+    for listing in listings:
+
+        current_property_location = str(listing.formalised_address.replace(",", ""))
+
+        if len(current_property_location) > 10:
+            property_information.append(get_property_as_dict(current_property_location, listing.price))
+
+            # Remove duplicates at each interval of 25 items being added to it.
+            if len(property_information) % 10 == 0:
+                property_information = remove_duplicate_properties(property_information)
+            if len(property_information) >= 50:
+                get_batch_address(property_information)
+    return property_information
+
+
 def get_property_information(property_type):
-    pages = True
     property_information = []
+    pages = True
     offset = 0
 
     print_header(property_type)
@@ -76,21 +92,8 @@ def get_property_information(property_type):
         if not listings:
             pages = False
 
-        for listing in listings:
-
-            current_property_location = str(listing.formalised_address.replace(",", ""))
-
-            if len(current_property_location) > 10:
-                property_information.append(get_property_as_dict(current_property_location, listing.price))
-
-                # Remove duplicates at each interval of 25 items being added to it.
-                if len(property_information) % 10 == 0:
-                    property_information = remove_duplicate_properties(property_information)
-                if len(property_information) >= 50:
-                    get_batch_address(property_information)
-
+        property_information = validate_listings(listings, property_information)
         offset += 10
-        print(property_information)
 
 
 def main():
