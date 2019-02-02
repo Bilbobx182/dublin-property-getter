@@ -47,13 +47,26 @@ def get_propety_price(price_input):
     return price
 
 
+def get_batch_address(property_information):
+    for item in property_information:
+        print(item['address'])
+
+
+def get_property_as_dict(current_property_location, price):
+    return {
+        "address": current_property_location,
+        "price": get_propety_price(price)
+    }
+
+
+def remove_duplicate_properties(contents):
+    return [i for n, i in enumerate(contents) if i not in contents[n + 1:]]
+
+
 def get_property_information(property_type):
     pages = True
-    place_names = []
-    prices = []
-    locations = []
+    property_information = []
     offset = 0
-    current_properties_in_catagory = 0
 
     print_header(property_type)
 
@@ -66,19 +79,18 @@ def get_property_information(property_type):
         for listing in listings:
 
             current_property_location = str(listing.formalised_address.replace(",", ""))
-            is_valid_property = (current_property_location not in place_names and (len(current_property_location) > 10))
 
-            if is_valid_property:
-                place_names.append(current_property_location)
-                prices.append(get_propety_price(listing.price))
-                locations.append(get_geo_data(current_property_location))
-                current_properties_in_catagory += 1
-                print(current_properties_in_catagory)
+            if len(current_property_location) > 10:
+                property_information.append(get_property_as_dict(current_property_location, listing.price))
+
+                # Remove duplicates at each interval of 25 items being added to it.
+                if len(property_information) % 10 == 0:
+                    property_information = remove_duplicate_properties(property_information)
+                if len(property_information) >= 50:
+                    get_batch_address(property_information)
 
         offset += 10
-        if current_properties_in_catagory >= 500:
-            pages = False
-    write_to_file(place_names, prices, locations, str(property_type))
+        print(property_information)
 
 
 def main():
