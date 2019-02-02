@@ -22,8 +22,9 @@ def write_to_file(places, prices, locations, file_name_raw):
 
     with open(filename.replace("/", ""), 'a', encoding='utf-8') as file:
         while count < len(places):
-            file.write(places[count] + "," + prices[count] + "," + locations[count] + "," + filename.replace("/","") + "\n")
-            count+=1
+            file.write(
+                places[count] + "," + prices[count] + "," + locations[count] + "," + filename.replace("/", "") + "\n")
+            count += 1
     file.close()
 
 
@@ -32,16 +33,29 @@ def get_geo_data(data):
     return str(g._list[0].eastnorth).replace("[", "").replace("]", "")
 
 
-def get_property_information(property_type):
-    pages = True
+def print_header(property_type):
     print("<--------------->")
     print(property_type)
     print("<--------------->")
+
+
+def get_propety_price(price_input):
+    priceRaw = str(price_input)
+    price = re.sub("[^\d]", "", str(priceRaw.split(" ")))
+    if "week" in priceRaw.lower():
+        price = str((int(price)) * 4)
+    return price
+
+
+def get_property_information(property_type):
+    pages = True
     place_names = []
     prices = []
     locations = []
     offset = 0
     current_properties_in_catagory = 0
+
+    print_header(property_type)
 
     while pages:
         listings = get_daft_listings(property_type, offset)
@@ -50,26 +64,21 @@ def get_property_information(property_type):
             pages = False
 
         for listing in listings:
-            priceRaw = str(listing.price)
-            price = re.sub("[^\d]", "", str(priceRaw.split(" ")))
-            if "week" in priceRaw.lower():
-                price = str((int(price)) * 4)
 
             current_property_location = str(listing.formalised_address.replace(",", ""))
+            is_valid_property = (current_property_location not in place_names and (len(current_property_location) > 10))
 
-            if current_property_location not in place_names and (len(current_property_location) > 10):
+            if is_valid_property:
                 place_names.append(current_property_location)
-                prices.append(price)
-
+                prices.append(get_propety_price(listing.price))
                 locations.append(get_geo_data(current_property_location))
-
                 current_properties_in_catagory += 1
                 print(current_properties_in_catagory)
 
         offset += 10
-        if current_properties_in_catagory >= 50:
+        if current_properties_in_catagory >= 500:
             pages = False
-    write_to_file(place_names, prices, locations,str(property_type))
+    write_to_file(place_names, prices, locations, str(property_type))
 
 
 def main():
