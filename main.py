@@ -16,21 +16,47 @@ def get_daft_listings(property_type, offset):
     return daft.search()
 
 
-def write_to_file(places, prices, locations, file_name_raw):
+def write_to_file(property_information, file_name_raw):
     filename = str(date) + str(file_name_raw) + '.csv'
     count = 0
 
+    print(len(property_information))
+    property_information = remove_duplicate_properties(property_information)
+    print(len(property_information))
+
     with open(filename.replace("/", ""), 'a', encoding='utf-8') as file:
-        while count < len(places):
-            file.write(
-                places[count] + "," + prices[count] + "," + locations[count] + "," + filename.replace("/", "") + "\n")
+        for line in property_information:
+            print(len(property_information))
+            string_to_write = line['address'] + "," + line['price'] + "," + line['long'] + "," + line[
+                'lat'] + "," + filename.replace("/", "") + "\n"
+            file.write(string_to_write)
             count += 1
     file.close()
 
 
-def get_geo_data(data):
-    g = geocoder.bing(data, key="")
-    return str(g._list[0].eastnorth).replace("[", "").replace("]", "")
+def build_dict(seq, key):
+    return dict((d[key], dict(d, index=index)) for (index, d) in enumerate(seq))
+
+
+def get_geo_data(property_information, property_type):
+    information_by_address = build_dict(property_information, key="address")
+    data = [x['address'] for x in property_information]
+
+    g = geocoder.bing(data, method='batch', key="AtV8eTK7ZuP0D1ZE0Nr_Y00AGQsy7vewgt5IwH3Vw8s4kPv5zqIQuBYCnUtmJ9JO")
+
+    g_count = 0
+    output = []
+    while g_count < len(g):
+        output.append({
+            "address": g.location[g_count],
+            "price": information_by_address.get(g.location[g_count])['price'],
+            "lat": str(g._list[g_count].lat),
+            "long": str(g._list[g_count].lng)
+        })
+        g_count += 1
+
+    write_to_file(output, property_type)
+    print("GET GEO DONE")
 
 
 def print_header(property_type):
@@ -48,8 +74,7 @@ def get_propety_price(price_input):
 
 
 def get_batch_address(property_information):
-    for item in property_information:
-        print(item['address'])
+    get_geo_data(property_information)
 
 
 def get_property_as_dict(current_property_location, price):
@@ -63,7 +88,7 @@ def remove_duplicate_properties(contents):
     return [i for n, i in enumerate(contents) if i not in contents[n + 1:]]
 
 
-def validate_listings(listings, property_information):
+def validate_listings(listings, property_information, property_type):
     for listing in listings:
 
         current_property_location = str(listing.formalised_address.replace(",", ""))
@@ -75,7 +100,8 @@ def validate_listings(listings, property_information):
             if len(property_information) % 10 == 0:
                 property_information = remove_duplicate_properties(property_information)
             if len(property_information) >= 50:
-                get_batch_address(property_information)
+                get_geo_data(remove_duplicate_properties(property_information), property_type)
+                property_information = []
     return property_information
 
 
@@ -83,16 +109,14 @@ def get_property_information(property_type):
     property_information = []
     pages = True
     offset = 0
-
     print_header(property_type)
 
     while pages:
         listings = get_daft_listings(property_type, offset)
-
         if not listings:
             pages = False
+        property_information = validate_listings(listings, property_information, property_type)
 
-        property_information = validate_listings(listings, property_information)
         offset += 10
 
 
