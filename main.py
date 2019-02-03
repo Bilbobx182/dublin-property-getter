@@ -42,7 +42,7 @@ def get_geo_data(property_information, property_type):
     information_by_address = build_dict(property_information, key="address")
     data = [x['address'] for x in property_information]
 
-    g = geocoder.bing(data, method='batch', key="AtV8eTK7ZuP0D1ZE0Nr_Y00AGQsy7vewgt5IwH3Vw8s4kPv5zqIQuBYCnUtmJ9JO")
+    g = geocoder.bing(data, method='batch', key="")
 
     g_count = 0
     output = []
